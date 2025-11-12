@@ -7,7 +7,7 @@ const asyncHandler = (fn) => (req, res, next) => {
 };
 
 class UserController {
-  // Get all users
+  // Get all users (remains the same, useful for admin lists)
   getAllUsers = asyncHandler(async (req, res) => {
     const { page = 1, limit = 20, role, institute, search } = req.query;
     const skip = (page - 1) * limit;
@@ -56,6 +56,53 @@ class UserController {
     });
   });
 
+  // --- NEW FUNCTION ---
+  /**
+   * Gets all users for a specific institute.
+   * Used by Policy Makers to "drill down" into an institution.
+   */
+  getUsersByInstitute = asyncHandler(async (req, res) => {
+    const { institute } = req.params;
+    const { page = 1, limit = 50, role } = req.query;
+    const skip = (page - 1) * limit;
+
+    const where = {
+      institute: institute, // The institute name from the URL
+      ...(role && { role }),
+    };
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          phone: true,
+          isActive: true,
+          createdAt: true,
+        },
+        skip: parseInt(skip),
+        take: parseInt(limit),
+        orderBy: { role: 'asc' },
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    res.json({
+      success: true,
+      data: users,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  });
+
   // Get user by ID
   getUserById = asyncHandler(async (req, res) => {
     const user = await prisma.user.findUnique({
@@ -74,9 +121,16 @@ class UserController {
     });
 
     if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found.' });
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.',
+      });
     }
-    res.json({ success: true, data: user });
+
+    res.json({
+      success: true,
+      data: user,
+    });
   });
 
   // Create new user
@@ -117,7 +171,7 @@ class UserController {
       },
     });
 
-    logger.info(`New user created by ${req.user.email}: ${email}`);
+    logger.info(`User created by ${req.user.email}: ${user.email}`);
     res.status(201).json({
       success: true,
       message: 'User created successfully.',
@@ -172,7 +226,7 @@ class UserController {
     }
   });
 
-  // Set user status (activate/deactivate)
+  // Set user status
   setUserStatus = asyncHandler(async (req, res) => {
     const { isActive } = req.body;
 

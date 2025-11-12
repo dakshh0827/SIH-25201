@@ -16,6 +16,10 @@ router.use(can.manageUsers);
 // Get all users
 router.get('/', userController.getAllUsers);
 
+// --- NEW ROUTE ---
+// Get all users for a specific institute
+router.get('/institute/:institute', userController.getUsersByInstitute);
+
 // Create a new user
 router.post('/', createUserValidation, userController.createUser);
 
