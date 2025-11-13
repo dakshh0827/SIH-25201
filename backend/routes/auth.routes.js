@@ -50,15 +50,17 @@ router.post(
   authController.completeLogin
 );
 
-// --- NEW ROUTES ---
+// --- CRITICAL: Refresh and Logout Routes ---
 
 // Refresh Access Token (uses HttpOnly refresh token cookie)
-router.post("/refresh", otpLimiter, authController.refreshToken);
+// IMPORTANT: NO authMiddleware here! This endpoint uses the refresh token cookie, not the access token
+router.post("/refresh", authController.refreshToken);
 
 // Logout (clears HttpOnly refresh token cookie)
+// This can work with or without auth - if no token, it just clears cookies
 router.post("/logout", authController.logout);
 
-// --- END NEW ROUTES ---
+// --- END CRITICAL ROUTES ---
 
 // ===== OAuth Routes =====
 

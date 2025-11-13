@@ -1,4 +1,6 @@
 // =====================================================
+// ProfilePage.jsx (FIXED - Displays Correct User Info)
+// =====================================================
 
 import { useState } from "react";
 import { useAuthStore } from "../stores/authStore";
@@ -10,6 +12,7 @@ import {
   Lock,
   Check,
   AlertCircle,
+  Briefcase,
 } from "lucide-react";
 
 export default function ProfilePage() {
@@ -66,6 +69,15 @@ export default function ProfilePage() {
         text: error.message || "Failed to change password",
       });
     }
+  };
+
+  const getRoleDisplay = (role) => {
+    const roleMap = {
+      TRAINER: "Trainer",
+      LAB_MANAGER: "Lab Manager",
+      POLICY_MAKER: "Policy Maker",
+    };
+    return roleMap[role] || role;
   };
 
   return (
@@ -185,6 +197,7 @@ export default function ProfilePage() {
                 </p>
               </div>
             </div>
+            
             <div className="flex items-center gap-3">
               <Mail className="w-5 h-5 text-gray-400" />
               <div>
@@ -192,6 +205,7 @@ export default function ProfilePage() {
                 <p className="font-medium">{user?.email}</p>
               </div>
             </div>
+            
             <div className="flex items-center gap-3">
               <Phone className="w-5 h-5 text-gray-400" />
               <div>
@@ -199,19 +213,46 @@ export default function ProfilePage() {
                 <p className="font-medium">{user?.phone || "Not provided"}</p>
               </div>
             </div>
+            
             <div className="flex items-center gap-3">
-              <Building className="w-5 h-5 text-gray-400" />
+              <Briefcase className="w-5 h-5 text-gray-400" />
               <div>
                 <p className="text-sm text-gray-600">Role</p>
-                <p className="font-medium">{user?.role?.replace("_", " ")}</p>
+                <p className="font-medium">{getRoleDisplay(user?.role)}</p>
               </div>
             </div>
-            {user?.institute && (
+            
+            {/* Institute - shown for LAB_MANAGER and TRAINER */}
+            {(user?.role === "LAB_MANAGER" || user?.role === "TRAINER") && (
               <div className="flex items-center gap-3">
                 <Building className="w-5 h-5 text-gray-400" />
                 <div>
                   <p className="text-sm text-gray-600">Institute</p>
-                  <p className="font-medium">{user.institute}</p>
+                  <p className="font-medium">{user?.institute || "Not assigned"}</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Department - shown for LAB_MANAGER only */}
+            {user?.role === "LAB_MANAGER" && user?.department && (
+              <div className="flex items-center gap-3">
+                <Building className="w-5 h-5 text-gray-400" />
+                <div>
+                  <p className="text-sm text-gray-600">Department</p>
+                  <p className="font-medium">
+                    {user.department.replace(/_/g, " ")}
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {/* Lab - shown for TRAINER only */}
+            {user?.role === "TRAINER" && user?.lab?.name && (
+              <div className="flex items-center gap-3">
+                <Building className="w-5 h-5 text-gray-400" />
+                <div>
+                  <p className="text-sm text-gray-600">Lab</p>
+                  <p className="font-medium">{user.lab.name}</p>
                 </div>
               </div>
             )}

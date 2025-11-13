@@ -31,7 +31,7 @@ const DEPARTMENT_DISPLAY_NAMES = {
   AUTOMOTIVE_MECHANIC: "Automotive/Mechanic",
 };
 
-export default function LabTechnicianDashboard() {
+export default function LabManagerDashboard() {
   const { user } = useAuthStore();
   const {
     overview,
@@ -457,6 +457,7 @@ export default function LabTechnicianDashboard() {
           equipment={editingEquipment}
           userDepartment={user?.department}
           userInstitute={user?.institute}
+          userRole={user?.role} // Pass user role
         />
       )}
     </div>

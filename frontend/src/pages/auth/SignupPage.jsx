@@ -1,5 +1,5 @@
 // =====================================================
-// 17. src/pages/auth/SignupPage.jsx (FIXED)
+// SignupPage.jsx (FIXED - Correct fields for each role)
 // =====================================================
 
 import { useState } from "react";
@@ -24,6 +24,7 @@ export default function SignupPage() {
     role: "TRAINER",
     phone: "",
     institute: "",
+    department: "",
     labId: "",
   });
   const [error, setError] = useState("");
@@ -32,14 +33,18 @@ export default function SignupPage() {
   const { register } = useAuthStore();
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    
+    // Clear error when user starts typing
+    if (error) setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    // Validation
+    // Basic validation
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -50,37 +55,73 @@ export default function SignupPage() {
       return;
     }
 
-    // --- FIX: Institute is now required for Lab Techs AND Trainers ---
-    if (
-      (formData.role === "LAB_TECHNICIAN" || formData.role === "TRAINER") &&
-      !formData.institute
-    ) {
-      setError("Institute is required for Lab Technicians and Trainers");
-      return;
+    // Role-specific validation based on backend requirements
+    if (formData.role === "LAB_MANAGER") {
+      if (!formData.institute) {
+        setError("Institute is required for Lab Managers");
+        return;
+      }
+      if (!formData.department) {
+        setError("Department is required for Lab Managers");
+        return;
+      }
     }
-    // --- END FIX ---
 
-    if (formData.role === "TRAINER" && !formData.labId) {
-      setError("Lab ID is required for Trainers");
-      return;
+    if (formData.role === "TRAINER") {
+      if (!formData.institute) {
+        setError("Institute is required for Trainers");
+        return;
+      }
+      if (!formData.labId) {
+        setError("Lab ID is required for Trainers");
+        return;
+      }
     }
 
     setIsLoading(true);
 
     try {
-      // authStore's register(userData) already sends the full formData object.
-      // No need to change authStore, just send the correct data from here.
       const { confirmPassword, ...registerData } = formData;
-      await register(registerData);
+      
+      // Clean up data based on role to match backend expectations
+      const cleanData = { ...registerData };
+      
+      if (formData.role === "POLICY_MAKER") {
+        // Policy makers don't need institute, department, or labId
+        delete cleanData.institute;
+        delete cleanData.department;
+        delete cleanData.labId;
+      } else if (formData.role === "LAB_MANAGER") {
+        // Lab managers need institute and department, but NOT labId
+        delete cleanData.labId;
+      } else if (formData.role === "TRAINER") {
+        // Trainers need institute and labId, but NOT department
+        delete cleanData.department;
+      }
+
+      await register(cleanData);
       navigate("/verify-email", { state: { email: formData.email } });
     } catch (err) {
       setError(
-        err.message || "Registration failed. Please try again or check your inputs."
+        err.message ||
+          "Registration failed. Please check your inputs and try again."
       );
     } finally {
       setIsLoading(false);
     }
   };
+
+  const departments = [
+    "FITTER_MANUFACTURING",
+    "ELECTRICAL_ENGINEERING",
+    "WELDING_FABRICATION",
+    "TOOL_DIE_MAKING",
+    "ADDITIVE_MANUFACTURING",
+    "SOLAR_INSTALLER_PV",
+    "MATERIAL_TESTING_QUALITY",
+    "ADVANCED_MANUFACTURING_CNC",
+    "AUTOMOTIVE_MECHANIC",
+  ];
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-white px-4 py-8">
@@ -186,14 +227,18 @@ export default function SignupPage() {
                 required
               >
                 <option value="TRAINER">Trainer</option>
-                <option value="LAB_TECHNICIAN">Lab Technician</option>
+                <option value="LAB_MANAGER">Lab Manager</option>
                 <option value="POLICY_MAKER">Policy Maker</option>
               </select>
+              <p className="text-xs text-gray-500 mt-1">
+                {formData.role === "TRAINER" && "Trainers manage equipment in their assigned lab"}
+                {formData.role === "LAB_MANAGER" && "Lab Managers oversee all labs in their department"}
+                {formData.role === "POLICY_MAKER" && "Policy Makers have system-wide access"}
+              </p>
             </div>
 
-            {/* --- FIX: Conditional Fields for Institute --- */}
-            {(formData.role === "LAB_TECHNICIAN" ||
-              formData.role === "TRAINER") && (
+            {/* Institute (for LAB_MANAGER and TRAINER) */}
+            {(formData.role === "LAB_MANAGER" || formData.role === "TRAINER") && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Institute Name *
@@ -206,14 +251,40 @@ export default function SignupPage() {
                     value={formData.institute}
                     onChange={handleChange}
                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="e.g., ITI Pusa, Polytechnic College Delhi"
                     required
                   />
                 </div>
               </div>
             )}
-            {/* --- END FIX --- */}
 
-            {/* Conditional Field for Lab ID */}
+            {/* Department (for LAB_MANAGER only) */}
+            {formData.role === "LAB_MANAGER" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Department *
+                </label>
+                <select
+                  name="department"
+                  value={formData.department}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                >
+                  <option value="">Select Department</option>
+                  {departments.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept.replace(/_/g, " ")}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  You will manage all labs in this department
+                </p>
+              </div>
+            )}
+
+            {/* Lab ID (for TRAINER only) */}
             {formData.role === "TRAINER" && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -228,6 +299,9 @@ export default function SignupPage() {
                   placeholder="e.g., ITI-PUSA-MECH-01"
                   required
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter the unique Lab ID provided by your institute
+                </p>
               </div>
             )}
 

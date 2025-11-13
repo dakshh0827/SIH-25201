@@ -54,6 +54,15 @@ class AuthController {
       labId,
     } = req.body;
 
+    // Validate role is a valid UserRole enum value
+    const validRoles = ['POLICY_MAKER', 'LAB_MANAGER', 'TRAINER'];
+    if (role && !validRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid role. Must be one of: ${validRoles.join(', ')}`,
+      });
+    }
+
     let existingUser = await prisma.user.findUnique({ where: { email } });
 
     if (existingUser && existingUser.emailVerified) {
@@ -65,7 +74,7 @@ class AuthController {
 
     // Lab ID translation for Trainers
     let labInternalId = null;
-    if (role === USER_ROLE_ENUM.TRAINER) {
+    if (role === 'TRAINER') {
       if (!labId) {
         return res.status(400).json({
           success: false,
@@ -99,24 +108,60 @@ class AuthController {
       logger.info(`Lab found: ${lab.name} (ID: ${lab.id})`);
     }
 
+    // Validate role-specific requirements
+    if (role === 'LAB_MANAGER') {
+      if (!institute || !department) {
+        return res.status(400).json({
+          success: false,
+          message: "Institute and Department are required for Lab Managers.",
+        });
+      }
+      
+      // Validate department enum
+      const validDepartments = [
+        'FITTER_MANUFACTURING',
+        'ELECTRICAL_ENGINEERING',
+        'WELDING_FABRICATION',
+        'TOOL_DIE_MAKING',
+        'ADDITIVE_MANUFACTURING',
+        'SOLAR_INSTALLER_PV',
+        'MATERIAL_TESTING_QUALITY',
+        'ADVANCED_MANUFACTURING_CNC',
+        'AUTOMOTIVE_MECHANIC'
+      ];
+      
+      if (!validDepartments.includes(department)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid department. Must be one of: ${validDepartments.join(', ')}`,
+        });
+      }
+    }
+
+    if (role === 'TRAINER' && !institute) {
+      return res.status(400).json({
+        success: false,
+        message: "Institute is required for Trainers.",
+      });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Build base user data with proper null handling
     const baseUserData = {
       email,
       password: hashedPassword,
       firstName,
       lastName,
-      role: role || USER_ROLE_ENUM.TRAINER,
-      phone,
-      institute:
-        role === USER_ROLE_ENUM.LAB_MANAGER || role === USER_ROLE_ENUM.TRAINER
-          ? institute
-          : null,
-      department: role === USER_ROLE_ENUM.LAB_MANAGER ? department : null,
+      role: role || 'TRAINER', // Use string literal, not enum constant
+      phone: phone || null,
+      institute: (role === 'LAB_MANAGER' || role === 'TRAINER') ? institute : null,
+      department: role === 'LAB_MANAGER' ? department : null,
       emailVerified: false,
-      authProvider: AUTH_PROVIDER_ENUM.CREDENTIAL,
+      authProvider: 'CREDENTIAL', // Use string literal
     };
 
+    // For create operation
     const createData = {
       ...baseUserData,
       ...(labInternalId && {
@@ -126,6 +171,7 @@ class AuthController {
       }),
     };
 
+    // For update operation (if user exists but not verified)
     const updateData = {
       ...baseUserData,
       ...(labInternalId && {
@@ -145,7 +191,7 @@ class AuthController {
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     await prisma.oTP.updateMany({
-      where: { email, purpose: OTP_PURPOSE_ENUM.REGISTRATION, isUsed: false },
+      where: { email, purpose: 'REGISTRATION', isUsed: false },
       data: { isUsed: true },
     });
 
@@ -153,7 +199,7 @@ class AuthController {
       data: {
         email,
         otp,
-        purpose: OTP_PURPOSE_ENUM.REGISTRATION,
+        purpose: 'REGISTRATION',
         expiresAt,
       },
     });
@@ -179,7 +225,7 @@ class AuthController {
   });
 
   verifyEmail = asyncHandler(async (req, res, next) => {
-    const { email, otp, purpose = OTP_PURPOSE_ENUM.REGISTRATION } = req.body;
+    const { email, otp, purpose = 'REGISTRATION' } = req.body;
 
     const validOtp = await prisma.oTP.findFirst({
       where: {
@@ -246,7 +292,7 @@ class AuthController {
   });
 
   resendOtp = asyncHandler(async (req, res, next) => {
-    const { email, purpose = OTP_PURPOSE_ENUM.REGISTRATION } = req.body;
+    const { email, purpose = 'REGISTRATION' } = req.body;
 
     const user = await prisma.user.findUnique({ where: { email } });
 
@@ -257,7 +303,7 @@ class AuthController {
       });
     }
 
-    if (purpose === OTP_PURPOSE_ENUM.REGISTRATION && user.emailVerified) {
+    if (purpose === 'REGISTRATION' && user.emailVerified) {
       return res.status(400).json({
         success: false,
         message: "Email is already verified.",
@@ -299,7 +345,7 @@ class AuthController {
       });
     }
 
-    if (user.authProvider !== AUTH_PROVIDER_ENUM.CREDENTIAL) {
+    if (user.authProvider !== 'CREDENTIAL') {
       return res.status(401).json({
         success: false,
         message: `This account is registered with ${user.authProvider}. Please log in using that method.`,
@@ -342,12 +388,12 @@ class AuthController {
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
       await prisma.oTP.updateMany({
-        where: { email, purpose: OTP_PURPOSE_ENUM.LOGIN, isUsed: false },
+        where: { email, purpose: 'LOGIN', isUsed: false },
         data: { isUsed: true },
       });
 
       await prisma.oTP.create({
-        data: { email, otp, purpose: OTP_PURPOSE_ENUM.LOGIN, expiresAt },
+        data: { email, otp, purpose: 'LOGIN', expiresAt },
       });
 
       EmailService.sendOtpEmail(email, otp).catch((err) =>
@@ -401,7 +447,7 @@ class AuthController {
       where: {
         email,
         otp,
-        purpose: OTP_PURPOSE_ENUM.LOGIN,
+        purpose: 'LOGIN',
         isUsed: false,
         expiresAt: { gte: new Date() },
       },

@@ -1,8 +1,4 @@
-// =====================================================
-// 8. src/App.jsx (UPDATED)
-// =====================================================
-
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -30,18 +26,15 @@ import DashboardLayout from "./components/layout/DashboardLayout";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 function App() {
-  const { checkAuth, isLoading } = useAuthStore();
-  const hasCheckedAuth = useRef(false);
+  const { checkAuth, isLoading, isCheckingAuth } = useAuthStore();
 
   useEffect(() => {
-    // Only check auth once on initial mount
-    if (!hasCheckedAuth.current) {
-      hasCheckedAuth.current = true;
-      checkAuth();
-    }
-  }, []); // Empty dependency array - only run once
+    // Check auth only once on mount
+    checkAuth();
+  }, []); // Empty dependency array - checkAuth is stable
 
-  if (isLoading) {
+  // Show loading only on initial check
+  if (isLoading && !isCheckingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -89,7 +82,7 @@ function DashboardRouter() {
   switch (user.role) {
     case "TRAINER":
       return <TrainerDashboard />;
-    case "LAB_TECHNICIAN":
+    case "LAB_MANAGER":
       return <LabTechnicianDashboard />;
     case "POLICY_MAKER":
       return <PolicyMakerDashboard />;

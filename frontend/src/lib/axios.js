@@ -1,13 +1,9 @@
-// =====================================================
-// src/lib/axios.js (FIXED)
-// =====================================================
-
 import axios from "axios";
 import { useAuthStore } from "../stores/authStore";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
-  withCredentials: true, // Important for cookies
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
@@ -28,7 +24,7 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
-// Request interceptor - attach token to requests
+// Request interceptor
 api.interceptors.request.use(
   (config) => {
     const token = useAuthStore.getState().accessToken;
@@ -40,25 +36,22 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor - handle token refresh
+// Response interceptor
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Don't retry for these cases:
-    // 1. Not a 401 error
-    // 2. Already retried this request
-    // 3. Request is to login, register, or refresh endpoint
-    // 4. No response from server (network error)
+    // Don't intercept if:
+    // 1. No response (network error)
+    // 2. Not a 401 error
+    // 3. Already retried
+    // 4. Request is to auth endpoints that shouldn't trigger refresh
     if (
       !error.response ||
       error.response.status !== 401 ||
       originalRequest._retry ||
-      originalRequest.url?.includes("/auth/login") ||
-      originalRequest.url?.includes("/auth/register") ||
-      originalRequest.url?.includes("/auth/refresh") ||
-      originalRequest.url?.includes("/auth/verify-email")
+      originalRequest.url?.includes("/auth/")
     ) {
       return Promise.reject(error);
     }
@@ -75,34 +68,43 @@ api.interceptors.response.use(
         .catch((err) => Promise.reject(err));
     }
 
-    // Mark this request as retried
     originalRequest._retry = true;
     isRefreshing = true;
 
     try {
-      // Attempt to refresh the token
-      const response = await api.post("/auth/refresh");
-      const { accessToken } = response.data.data;
+      // Attempt to refresh the token using a fresh axios instance
+      const response = await axios.post(
+        `${api.defaults.baseURL}/auth/refresh`,
+        {},
+        { 
+          withCredentials: true,
+          headers: { "Content-Type": "application/json" }
+        }
+      );
+
+      const newAccessToken = response.data.data.accessToken;
 
       // Update token in store
-      useAuthStore.getState().setAccessToken(accessToken);
+      useAuthStore.getState().setAccessToken(newAccessToken);
 
-      // Process queued requests with new token
-      processQueue(null, accessToken);
+      // Process queued requests
+      processQueue(null, newAccessToken);
 
-      // Retry original request with new token
-      originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+      // Retry original request
+      originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
       return api(originalRequest);
     } catch (refreshError) {
-      // Refresh failed - clear auth and reject queued requests
+      // Refresh failed - process queue with error
       processQueue(refreshError, null);
+      
+      // Clear auth state
       useAuthStore.getState().clearAuth();
-
-      // Redirect to login if not already there
-      if (!window.location.pathname.includes("/login")) {
+      
+      // Only redirect if not already on auth pages
+      if (!window.location.pathname.match(/^\/(login|signup|verify-email)/)) {
         window.location.href = "/login";
       }
-
+      
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;
