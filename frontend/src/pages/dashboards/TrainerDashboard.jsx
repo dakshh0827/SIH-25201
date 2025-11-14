@@ -1,5 +1,5 @@
 // =====================================================
-// TrainerDashboard.jsx (FIXED - No Manual Filtering)
+// TrainerDashboard.jsx (FIXED)
 // =====================================================
 
 import { useEffect, useState } from "react";
@@ -36,8 +36,6 @@ export default function TrainerDashboard() {
     try {
       await Promise.all([
         fetchOverview(),
-        // Backend's RBAC middleware automatically filters by user's labId
-        // No need to send labId manually
         fetchEquipment(),
         fetchAlerts({ isResolved: false }),
       ]);
@@ -85,10 +83,12 @@ export default function TrainerDashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Trainer Dashboard</h1>
-        {/* Backend returns user.lab.name and user.institute */}
+        {/* FIXED: Properly render institute */}
         <p className="text-gray-600 mt-1">
           Lab: {user?.lab?.name || "Unknown"} | Institute:{" "}
-          {user?.institute || "Unknown"}
+          {typeof user?.institute === 'string' 
+            ? user.institute 
+            : user?.institute?.name || user?.instituteId || "Unknown"}
         </p>
       </div>
 

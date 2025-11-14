@@ -1,6 +1,6 @@
 /*
  * =====================================================
- * 1. frontend/src/pages/dashboards/LabManagerDashboard.jsx (FIXED)
+ * LabManagerDashboard.jsx - FIXED
  * =====================================================
  */
 import { useEffect, useState } from "react";
@@ -8,7 +8,7 @@ import { useDashboardStore } from "../../stores/dashboardStore";
 import { useEquipmentStore } from "../../stores/equipmentStore";
 import { useAlertStore } from "../../stores/alertStore";
 import { useAuthStore } from "../../stores/authStore";
-import { useLabStore } from "../../stores/labStore"; // Import lab store
+import { useLabStore } from "../../stores/labStore";
 import StatCard from "../../components/common/StatCard";
 import EquipmentTable from "../../components/dashboard/EquipmentTable";
 import AlertsList from "../../components/dashboard/AlertsList";
@@ -26,7 +26,6 @@ import {
   BarChart2,
 } from "lucide-react";
 
-// Department display names
 const DEPARTMENT_DISPLAY_NAMES = {
   FITTER_MANUFACTURING: "Fitter/Manufacturing",
   ELECTRICAL_ENGINEERING: "Electrical Engineering",
@@ -39,10 +38,19 @@ const DEPARTMENT_DISPLAY_NAMES = {
   AUTOMOTIVE_MECHANIC: "Automotive/Mechanic",
 };
 
+// Helper function to safely get institute name
+const getInstituteName = (institute) => {
+  if (!institute) return "Unknown Institute";
+  if (typeof institute === 'string') return institute;
+  if (typeof institute === 'object') {
+    return institute.name || institute.instituteId || "Unknown Institute";
+  }
+  return "Unknown Institute";
+};
+
 export default function LabManagerDashboard() {
   const { user } = useAuthStore();
-  const { overview, fetchOverview, isLoading: dashboardLoading } =
-    useDashboardStore();
+  const { overview, fetchOverview, isLoading: dashboardLoading } = useDashboardStore();
   const {
     equipment,
     fetchEquipment,
@@ -52,7 +60,6 @@ export default function LabManagerDashboard() {
     isLoading: equipmentLoading,
   } = useEquipmentStore();
   const { alerts, fetchAlerts, resolveAlert } = useAlertStore();
-  // Use Lab Store
   const {
     labs,
     fetchLabs,
@@ -62,7 +69,7 @@ export default function LabManagerDashboard() {
     isLoading: labLoading,
   } = useLabStore();
 
-  const [selectedLabId, setSelectedLabId] = useState("all"); // Public Lab ID
+  const [selectedLabId, setSelectedLabId] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -76,27 +83,25 @@ export default function LabManagerDashboard() {
     try {
       await Promise.all([
         fetchOverview(),
-        fetchEquipment(), // Fetches all equipment for this manager
+        fetchEquipment(),
         fetchAlerts({ isResolved: false }),
-        fetchLabs(), // Fetches all labs for this manager
+        fetchLabs(),
       ]);
-      clearLabSummary(); // Clear summary on reload
+      clearLabSummary();
     } catch (error) {
       console.error("Failed to load dashboard data:", error);
     }
   };
 
-  // Handler when a lab is clicked from the list
   const handleSelectLab = (labId) => {
     if (labId === selectedLabId) {
-      // Deselect
       setSelectedLabId("all");
-      fetchEquipment(); // Fetch all equipment again
+      fetchEquipment();
       clearLabSummary();
     } else {
       setSelectedLabId(labId);
-      fetchEquipment({ labId: labId }); // Fetch equipment for this lab
-      fetchLabSummary(labId); // Fetch summary for this lab
+      fetchEquipment({ labId: labId });
+      fetchLabSummary(labId);
     }
   };
 
@@ -104,7 +109,7 @@ export default function LabManagerDashboard() {
     try {
       await createEquipment(data);
       setIsModalOpen(false);
-      await loadDashboardData(); // Refresh all data
+      await loadDashboardData();
     } catch (error) {
       console.error("Failed to create equipment:", error);
       throw error;
@@ -116,7 +121,7 @@ export default function LabManagerDashboard() {
       await updateEquipment(id, data);
       setIsModalOpen(false);
       setEditingEquipment(null);
-      await loadDashboardData(); // Refresh all data
+      await loadDashboardData();
     } catch (error) {
       console.error("Failed to update equipment:", error);
       throw error;
@@ -129,7 +134,7 @@ export default function LabManagerDashboard() {
     }
     try {
       await deleteEquipment(id);
-      await loadDashboardData(); // Refresh all data
+      await loadDashboardData();
     } catch (error) {
       console.error("Failed to delete equipment:", error);
       alert("Failed to delete equipment. Please try again.");
@@ -146,17 +151,13 @@ export default function LabManagerDashboard() {
     setEditingEquipment(null);
   };
 
-  // Filter equipment based on local filters
   const getFilteredEquipment = () => {
-    // Start with the equipment list (which is already filtered by lab if one is selected)
     let filtered = equipment;
 
-    // Filter by status
     if (selectedStatus !== "all") {
       filtered = filtered.filter((eq) => eq.status?.status === selectedStatus);
     }
 
-    // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -171,7 +172,6 @@ export default function LabManagerDashboard() {
     return filtered;
   };
 
-  // This function is just for CSV export
   const convertToCSV = (data) => {
     if (!data.length) return "";
     const headers = [
@@ -248,15 +248,14 @@ export default function LabManagerDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             Lab Manager Dashboard
           </h1>
           <p className="text-gray-600 mt-1">
-            {user?.institute} |{" "}
-            {DEPARTMENT_DISPLAY_NAMES[user?.department] || user?.department}
+            {getInstituteName(user?.institute)} |{" "}
+            {DEPARTMENT_DISPLAY_NAMES[user?.department] || user?.department || "Unknown Department"}
           </p>
         </div>
         <button
@@ -268,14 +267,12 @@ export default function LabManagerDashboard() {
         </button>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, index) => (
           <StatCard key={index} {...stat} />
         ))}
       </div>
 
-      {/* Filters Section */}
       <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
         <div className="flex items-center gap-2 mb-4">
           <Filter className="w-5 h-5 text-gray-600" />
@@ -283,7 +280,6 @@ export default function LabManagerDashboard() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Search */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Search Equipment
@@ -297,7 +293,6 @@ export default function LabManagerDashboard() {
             />
           </div>
 
-          {/* Status Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Status
@@ -334,9 +329,7 @@ export default function LabManagerDashboard() {
         </div>
       </div>
 
-      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Lab List & Analytics */}
         <div className="space-y-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-100">
             <div className="p-4 border-b border-gray-200">
@@ -366,7 +359,6 @@ export default function LabManagerDashboard() {
                         </h4>
                       </div>
                       <span className="text-sm font-bold text-blue-600">
-                        {/* *** THIS IS THE FIX *** */}
                         {lab._count?.equipments || 0} equip.
                       </span>
                     </div>
@@ -435,16 +427,13 @@ export default function LabManagerDashboard() {
           </div>
         </div>
 
-        {/* Equipment Table */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-lg shadow-sm border border-gray-100">
             <div className="p-4 border-b border-gray-200">
               <h2 className="text-xl font-semibold">
                 Equipment{" "}
                 {selectedLabId !== "all"
-                  ? `(Lab: ${
-                      labs.find((l) => l.labId === selectedLabId)?.name
-                    })`
+                  ? `(Lab: ${labs.find((l) => l.labId === selectedLabId)?.name})`
                   : "(All Labs)"}
               </h2>
             </div>
@@ -479,20 +468,16 @@ export default function LabManagerDashboard() {
         </div>
       </div>
 
-      {/* Alerts List */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
         <h2 className="text-xl font-semibold mb-4">Recent Alerts</h2>
         <AlertsList alerts={alerts.slice(0, 5)} onResolve={resolveAlert} />
       </div>
 
-      {/* Equipment Form Modal */}
       {isModalOpen && (
         <EquipmentFormModal
           isOpen={isModalOpen}
           onClose={handleModalClose}
-          onSubmit={
-            editingEquipment ? handleUpdateEquipment : handleCreateEquipment
-          }
+          onSubmit={editingEquipment ? handleUpdateEquipment : handleCreateEquipment}
           equipment={editingEquipment}
         />
       )}

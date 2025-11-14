@@ -39,17 +39,22 @@ model User {
   lastName      String
   role          UserRole     @default(TRAINER)
   phone         String?
-  
   // --- UPDATED: These fields are now used by both Trainer and Lab Manager ---
-  department    Department?  // Department for Trainer & Lab Manager
-  instituteId   String?      // Institute for Trainer & Lab Manager
-  institute     Institute?   @relation(fields: [instituteId], references: [instituteId], onDelete: SetNull)
-  labId         String?      @db.ObjectId // Primary lab for Trainer & Lab Manager
-  lab           Lab?         @relation(fields: [labId], references: [id], onDelete: SetNull)
+  department    Department? // Department for Trainer & Lab Manager
+  instituteId   String? // Institute for Trainer & Lab Manager
+  institute     Institute? @relation(fields: [instituteId], references: [instituteId], onDelete: SetNull)
+  labId         String? @db.ObjectId // Primary lab for Trainer & Lab Manager
+  lab           Lab? @relation(fields: [labId], references: [id], onDelete: SetNull)
   // --- END UPDATE ---
   
   isActive      Boolean      @default(true)
   emailVerified Boolean      @default(false)
+  
+  // --- FIX: ADDED MISSING AUTH FIELDS ---
+  authProvider  AuthProvider @default(CREDENTIAL)
+  googleId      String?      @unique
+  githubId      String?      @unique
+  // --- END FIX ---
   
   // ADDED: Missing reverse relations
   notifications      Notification[]    // Reverse relation for Notification.user
@@ -232,7 +237,6 @@ model Equipment {
   materialTestingEquipmentName      MaterialTestingEquipmentName?
   advancedManufacturingEquipmentName AdvancedManufacturingEquipmentName?
   automotiveEquipmentName           AutomotiveEquipmentName?
-
   // Relations
   status          EquipmentStatus?
   sensorData      SensorData[]
@@ -240,7 +244,6 @@ model Equipment {
   maintenanceLogs MaintenanceLog[]
   usageAnalytics  UsageAnalytics[]
   analyticsParams DepartmentAnalytics?
-
   @@index([labId])
   @@index([department])
   @@map("equipment")
@@ -270,18 +273,15 @@ model DepartmentAnalytics {
   voltage           Float?
   current           Float?
   powerFactor       Float?
-  
   // Material Testing
   testAccuracy      Float?
   calibrationStatus String?
   loadCapacity      Float?
-  
   // Advanced Manufacturing/CNC
   spindleSpeed      Float?
   feedRate          Float?
   toolWear          Float?
   dimensionalAccuracy Float?
-  
   // Additive Manufacturing
   printQuality      Float?
   layerHeight       Float?
@@ -346,14 +346,12 @@ model SensorData {
   energyConsumption Float?
   pressure          Float?
   humidity          Float?
-  
   // Department-specific sensor data
   voltage           Float?
   current           Float?
   rpm               Float?
   powerFactor       Float?
   loadForce         Float?
-  
   isAnomaly    Boolean @default(false)
   anomalyScore Float?
 

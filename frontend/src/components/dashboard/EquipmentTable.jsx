@@ -1,3 +1,10 @@
+/*
+ * =====================================================
+ * EquipmentTable.jsx - FIXED
+ * =====================================================
+ */
+// Copy this into: frontend/src/components/dashboard/EquipmentTable.jsx
+
 import { useState } from "react";
 import { 
   Edit2, 
@@ -51,6 +58,16 @@ const STATUS_CONFIG = {
     icon: AlertCircle,
     label: "Warning" 
   },
+};
+
+// Helper function to safely get institute name
+const getInstituteName = (institute) => {
+  if (!institute) return "";
+  if (typeof institute === 'string') return institute;
+  if (typeof institute === 'object') {
+    return institute.name || institute.instituteId || "";
+  }
+  return "";
 };
 
 export default function EquipmentTable({ 
@@ -142,7 +159,6 @@ export default function EquipmentTable({
                 key={item.id} 
                 className="hover:bg-gray-50 transition-colors"
               >
-                {/* Equipment Info */}
                 <td className="px-4 py-4">
                   <div>
                     <div className="font-medium text-gray-900">
@@ -154,17 +170,15 @@ export default function EquipmentTable({
                   </div>
                 </td>
 
-                {/* Lab */}
                 <td className="px-4 py-4">
                   <div className="text-sm">
                     <div className="text-gray-900">{item.lab?.name || "N/A"}</div>
                     <div className="text-gray-500 text-xs">
-                      {item.lab?.institute || ""}
+                      {getInstituteName(item.lab?.institute)}
                     </div>
                   </div>
                 </td>
 
-                {/* Status */}
                 <td className="px-4 py-4">
                   <span
                     className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${statusConfig.color}`}
@@ -174,7 +188,6 @@ export default function EquipmentTable({
                   </span>
                 </td>
 
-                {/* Health Score */}
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-2">
                     <div className="flex-1 bg-gray-200 rounded-full h-2 w-16">
@@ -199,18 +212,15 @@ export default function EquipmentTable({
                   </div>
                 </td>
 
-                {/* Manufacturer */}
                 <td className="px-4 py-4 text-sm text-gray-900">
                   <div>{item.manufacturer}</div>
                   <div className="text-gray-500 text-xs">{item.model}</div>
                 </td>
 
-                {/* Purchase Date */}
                 <td className="px-4 py-4 text-sm text-gray-900">
                   {formatDate(item.purchaseDate)}
                 </td>
 
-                {/* Actions */}
                 {showActions && (
                   <td className="px-4 py-4 text-right relative">
                     <button

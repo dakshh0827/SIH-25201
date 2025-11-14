@@ -27,7 +27,8 @@ const authMiddleware = (req, res, next) => {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+    // --- FIX: Use JWT_SECRET, not JWT_ACCESS_SECRET, to match signing secret
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // CRITICAL: Ensure req.user has all necessary fields
     req.user = {
@@ -39,6 +40,7 @@ const authMiddleware = (req, res, next) => {
       institute: decoded.institute || decoded.instituteId,
       department: decoded.department,
       labId: decoded.labId,
+      authProvider: decoded.authProvider, // --- FIX: Added authProvider
     };
 
     // Log for debugging (remove in production)

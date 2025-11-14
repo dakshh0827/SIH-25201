@@ -1,6 +1,6 @@
 /*
  * =====================================================
- * 3. frontend/src/components/dashboard/AlertsList.jsx (UPDATED)
+ * 3. frontend/src/components/dashboard/AlertsList.jsx (FIXED)
  * =====================================================
  */
 import {
@@ -82,11 +82,15 @@ export default function AlertsList({ alerts, onResolve }) {
                   {/* Alert Message */}
                   <p className="text-sm mb-2">{alert.message}</p>
 
-                  {/* Alert Context */}
+                  {/* Alert Context - FIXED */}
                   {equipment && lab && (
-                    <div className="text-xs opacity-80 break-words">
-                      <span>{lab.institute}</span>
-                      <span className="mx-1">➔</span>
+                    <div className="text-xs opacity-80">
+                      {lab.instituteId && (
+                        <>
+                          <span>{lab.instituteId}</span>
+                          <span className="mx-1">➔</span>
+                        </>
+                      )}
                       <span>
                         {DEPARTMENT_DISPLAY_NAMES[lab.department] ||
                           lab.department}

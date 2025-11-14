@@ -8,6 +8,7 @@ import {
   USER_ROLE_ENUM,
   OTP_PURPOSE_ENUM,
   AUTH_PROVIDER_ENUM,
+  DEPARTMENT_ENUM, // --- FIX: Import DEPARTMENT_ENUM
 } from "../utils/constants.js";
 import EmailService from "../utils/emailService.js";
 
@@ -25,6 +26,7 @@ const generateAccessToken = (user) => {
     instituteId: user.instituteId,
     department: user.department,
     labId: user.labId,
+    authProvider: user.authProvider, // --- FIX: Add authProvider to JWT
   };
   return jwt.sign(payload, jwtConfig.secret, {
     expiresIn: jwtConfig.expiresIn,
@@ -55,11 +57,12 @@ class AuthController {
     } = req.body;
 
     // Validate role is a valid UserRole enum value
-    const validRoles = ['POLICY_MAKER', 'LAB_MANAGER', 'TRAINER'];
+    // --- FIX: Use USER_ROLE_ENUM from constants ---
+    const validRoles = Object.values(USER_ROLE_ENUM);
     if (role && !validRoles.includes(role)) {
       return res.status(400).json({
         success: false,
-        message: `Invalid role. Must be one of: ${validRoles.join(', ')}`,
+        message: `Invalid role. Must be one of: ${validRoles.join(", ")}`,
       });
     }
 
@@ -114,17 +117,8 @@ class AuthController {
       }
       
       // Validate department enum
-      const validDepartments = [
-        'FITTER_MANUFACTURING',
-        'ELECTRICAL_ENGINEERING',
-        'WELDING_FABRICATION',
-        'TOOL_DIE_MAKING',
-        'ADDITIVE_MANUFACTURING',
-        'SOLAR_INSTALLER_PV',
-        'MATERIAL_TESTING_QUALITY',
-        'ADVANCED_MANUFACTURING_CNC',
-        'AUTOMOTIVE_MECHANIC'
-      ];
+      // --- FIX: Use DEPARTMENT_ENUM from constants ---
+      const validDepartments = Object.values(DEPARTMENT_ENUM);
       
       if (!validDepartments.includes(department)) {
         return res.status(400).json({
@@ -230,6 +224,7 @@ class AuthController {
         lastName: true,
         role: true,
         instituteId: true,
+        authProvider: true, // --- FIX: Add authProvider
         institute: {
           select: {
             instituteId: true,
@@ -321,7 +316,9 @@ class AuthController {
       });
     }
 
-    if (user.authProvider !== 'CREDENTIAL') {
+    // --- FIX: Check if authProvider exists AND is not CREDENTIAL ---
+    // This allows legacy users (where authProvider is null) to log in.
+    if (user.authProvider && user.authProvider !== 'CREDENTIAL') {
       return res.status(401).json({
         success: false,
         message: `This account is registered with ${user.authProvider}. Please log in using that method.`,
@@ -393,6 +390,7 @@ class AuthController {
       instituteId: user.instituteId,
       department: user.department,
       labId: user.labId,
+      authProvider: user.authProvider, // --- FIX: Add authProvider
     };
 
     const accessToken = generateAccessToken(userPayload);
@@ -453,6 +451,7 @@ class AuthController {
         instituteId: true,
         department: true,
         labId: true,
+        authProvider: true, // --- FIX: Add authProvider
       },
     });
 
@@ -543,13 +542,13 @@ class AuthController {
       isActive: true,
       emailVerified: true,
       createdAt: true,
+      authProvider: true, // --- FIX: Add authProvider
       lab: {
         select: {
           labId: true,
           name: true,
         },
       },
-      // REMOVED: authProvider - this field doesn't exist in schema
     },
   });
 
@@ -586,6 +585,7 @@ class AuthController {
         instituteId: true,
         department: true,
         labId: true,
+        authProvider: true, // --- FIX: Add authProvider
       },
     });
 
@@ -672,6 +672,7 @@ class AuthController {
         department: true,
         labId: true,
         isActive: true,
+        authProvider: true, // --- FIX: Add authProvider
       },
     });
 
@@ -688,6 +689,7 @@ class AuthController {
       instituteId: user.instituteId,
       department: user.department,
       labId: user.labId,
+      authProvider: user.authProvider, // --- FIX: Add authProvider
     };
     const accessToken = generateAccessToken(userPayload);
 

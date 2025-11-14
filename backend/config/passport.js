@@ -45,7 +45,8 @@ if (oauthConfig.google.clientId && oauthConfig.google.clientSecret) {
               where: { id: user.id },
               data: {
                 googleId: profile.id,
-                isEmailVerified: true, // OAuth emails are pre-verified
+                emailVerified: true, // --- FIX: Changed from isEmailVerified
+                authProvider: 'GOOGLE', // --- FIX: Ensure authProvider is set on login
               },
             });
           } else {
@@ -57,7 +58,7 @@ if (oauthConfig.google.clientId && oauthConfig.google.clientSecret) {
                 firstName,
                 lastName,
                 role: USER_ROLE_ENUM.TRAINER,
-                isEmailVerified: true,
+                emailVerified: true, // --- FIX: Changed from isEmailVerified
                 authProvider: 'GOOGLE',
               },
             });
@@ -100,7 +101,8 @@ if (oauthConfig.github.clientId && oauthConfig.github.clientSecret) {
               where: { id: user.id },
               data: {
                 githubId: profile.id,
-                isEmailVerified: true,
+                emailVerified: true, // --- FIX: Changed from isEmailVerified
+                authProvider: 'GITHUB', // --- FIX: Ensure authProvider is set on login
               },
             });
           } else {
@@ -112,7 +114,7 @@ if (oauthConfig.github.clientId && oauthConfig.github.clientSecret) {
                 firstName,
                 lastName,
                 role: USER_ROLE_ENUM.TRAINER,
-                isEmailVerified: true,
+                emailVerified: true, // --- FIX: Changed from isEmailVerified
                 authProvider: 'GITHUB',
               },
             });
