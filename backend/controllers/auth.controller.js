@@ -513,8 +513,15 @@ class AuthController {
     logger.debug("Redirecting to GitHub for authentication...");
   };
 
-  
-getProfile = asyncHandler(async (req, res) => {
+  getProfile = asyncHandler(async (req, res) => {
+  // Make sure req.user exists and has the userId
+  if (!req.user || !req.user.userId) {
+    return res.status(401).json({
+      success: false,
+      message: "Authentication required.",
+    });
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: req.user.userId },
     select: {

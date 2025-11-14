@@ -10,14 +10,20 @@ export const useInstituteStore = create((set, get) => ({
   institutes: [],
   isLoading: false,
   error: null,
-  lastFetch: null, // Track last fetch time
+  lastFetch: null,
+  pendingRequest: null, // Track pending request
 
   // Fetch all institutes
   fetchInstitutes: async (force = false) => {
     const state = get();
     
+    // Return pending request if one exists
+    if (state.pendingRequest) {
+      return state.pendingRequest;
+    }
+
     // Prevent multiple simultaneous calls
-    if (state.isLoading) {
+    if (state.isLoading && !force) {
       return { success: true, data: state.institutes };
     }
 
@@ -27,23 +33,31 @@ export const useInstituteStore = create((set, get) => ({
       return { success: true, data: state.institutes };
     }
 
-    set({ isLoading: true, error: null });
-    try {
-      const response = await api.get("/institutes");
-      set({
-        institutes: response.data.data,
-        isLoading: false,
-        lastFetch: now,
-      });
-      return response.data;
-    } catch (error) {
-      const errorMessage = error.response?.data?.message || "Failed to fetch institutes";
-      set({
-        error: errorMessage,
-        isLoading: false,
-      });
-      throw new Error(errorMessage);
-    }
+    // Create and store the promise
+    const request = (async () => {
+      set({ isLoading: true, error: null });
+      try {
+        const response = await api.get("/institutes");
+        set({
+          institutes: response.data.data,
+          isLoading: false,
+          lastFetch: now,
+          pendingRequest: null,
+        });
+        return response.data;
+      } catch (error) {
+        const errorMessage = error.response?.data?.message || "Failed to fetch institutes";
+        set({
+          error: errorMessage,
+          isLoading: false,
+          pendingRequest: null,
+        });
+        throw new Error(errorMessage);
+      }
+    })();
+
+    set({ pendingRequest: request });
+    return request;
   },
 
   // Create a new institute
