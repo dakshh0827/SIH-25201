@@ -177,6 +177,21 @@ export default function PolicyMakerDashboard() {
     }
   };
 
+  // ✅ FIXED: Handle alert resolution with real-time updates
+  const handleResolveAlert = async (alertId) => {
+    try {
+      await resolveAlert(alertId);
+      // Refresh alerts and overview stats immediately
+      await Promise.all([
+        fetchAlerts({ isResolved: false }),
+        fetchOverview(), // Update the unresolved alerts count
+      ]);
+    } catch (error) {
+      console.error("Failed to resolve alert:", error);
+      alert("Failed to resolve alert. Please try again.");
+    }
+  };
+
   // == MODAL HANDLERS ==
   const handleOpenCreateLab = () => {
     setEditingLab(null);
@@ -494,9 +509,10 @@ export default function PolicyMakerDashboard() {
       {/* Alerts Section */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Recent Alerts</h2>
+        {/* ✅ FIXED: Pass handleResolveAlert instead of resolveAlert directly */}
         <AlertsList 
           alerts={alerts.slice(0, 10)} 
-          onResolve={resolveAlert} 
+          onResolve={handleResolveAlert} 
         />
       </div>
 

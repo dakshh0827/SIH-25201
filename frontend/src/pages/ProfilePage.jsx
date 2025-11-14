@@ -221,13 +221,13 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            {/* <div className="flex items-center gap-3">
               <Phone className="w-5 h-5 text-gray-400" />
               <div>
                 <p className="text-sm text-gray-600">Phone</p>
                 <p className="font-medium">{user?.phone || "Not provided"}</p>
               </div>
-            </div>
+            </div> */}
 
             <div className="flex items-center gap-3">
               <Briefcase className="w-5 h-5 text-gray-400" />

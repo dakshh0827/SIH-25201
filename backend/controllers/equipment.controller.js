@@ -45,66 +45,70 @@ const clearAllDepartmentFields = () => {
 
 class EquipmentController {
   // Get all equipment
-  getAllEquipment = asyncHandler(async (req, res) => {
-    const {
-      page = 1,
-      limit = 10,
-      department,
-      status,
-      institute,
-      labId,
-      search,
-    } = req.query;
-    const skip = (page - 1) * limit;
+// FIXED getAllEquipment method - Replace lines 44-119 in equipment.controller.js
 
-    // Get the base filter from RBAC
-    const roleFilter = filterDataByRole(req);
+getAllEquipment = asyncHandler(async (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+    department,
+    status,
+    institute,
+    labId,
+    search,
+  } = req.query;
+  const skip = (page - 1) * limit;
 
-    // Build where clause
-    const where = {
-      ...roleFilter,
-      labId: { not: null },
-      ...(department && { department }),
-      ...(search && {
-        OR: [
-          { name: { contains: search, mode: "insensitive" } },
-          { equipmentId: { contains: search, mode: "insensitive" } },
-          { manufacturer: { contains: search, mode: "insensitive" } },
-        ],
-      }),
-      isActive: true,
+  // Get the base filter from RBAC
+  const roleFilter = filterDataByRole(req);
+
+  // Build where clause for equipment
+  const where = {
+    ...roleFilter,
+    ...(roleFilter?.labId ? {} : { labId: { not: null } }),
+    ...(department && { department }),
+    ...(search && {
+      OR: [
+        { name: { contains: search, mode: "insensitive" } },
+        { equipmentId: { contains: search, mode: "insensitive" } },
+        { manufacturer: { contains: search, mode: "insensitive" } },
+      ],
+    }),
+    isActive: true,
+  };
+
+  // Add lab filter if provided
+  if (labId && req.user.role !== "TRAINER") {
+    const lab = await prisma.lab.findUnique({ where: { labId } });
+    if (lab) {
+      where.labId = lab.id;
+    }
+  }
+
+  // Add institute filter
+  if (req.user.role !== "TRAINER" && institute) {
+    where.lab = { 
+      ...(where.lab || {}), 
+      institute 
     };
+  }
 
-    // Add lab filter if provided
-    if (labId) {
-      // Find lab by public labId
-      const lab = await prisma.lab.findUnique({ where: { labId } });
-      if (lab) {
-        where.labId = lab.id; // Use internal ObjectId
-      }
-    }
+  // ✅ FIXED: Filter by status through the relation
+  if (status) {
+    where.status = {
+      status: status  // Filter the related status record
+    };
+  }
 
-    // Add institute filter (only for LAB_MANAGER and POLICY_MAKER)
-    if (req.user.role !== "TRAINER" && institute) {
-      where.lab = { 
-        ...(where.lab || {}), 
-        institute 
-      };
-    }
-
-    // Add status filter
-    if (status) {
-      where.status = { status };
-    }
-
+  try {
     const [equipment, total] = await Promise.all([
       prisma.equipment.findMany({
         where,
         include: {
-          status: true,
+          status: true,  // Include all status data
           lab: { 
             select: { 
-              labId: true,  // Include public labId
+              labId: true,
               name: true, 
               institute: true,
               department: true,
@@ -134,7 +138,12 @@ class EquipmentController {
         totalPages: Math.ceil(total / limit),
       },
     });
-  });
+  } catch (error) {
+    logger.error('Error in getAllEquipment:', error);
+    throw error;
+  }
+});
+
 
   // Get equipment by ID
   getEquipmentById = asyncHandler(async (req, res) => {
@@ -142,7 +151,7 @@ class EquipmentController {
     const roleFilter = filterDataByRole(req);
 
     const equipment = await prisma.equipment.findFirst({
-      where: { id, ...roleFilter },
+      where: { id, ...roleFilter, isActive: true },
       include: {
         status: true,
         lab: { 
@@ -334,7 +343,7 @@ class EquipmentController {
     // Check if equipment exists and user has access
     const roleFilter = filterDataByRole(req);
     const existingEquipment = await prisma.equipment.findFirst({
-      where: { id, ...roleFilter },
+      where: { id, ...roleFilter, isActive: true },
       include: { lab: true },
     });
 
@@ -474,17 +483,25 @@ class EquipmentController {
   getEquipmentStats = asyncHandler(async (req, res) => {
     const roleFilter = filterDataByRole(req);
 
+    // Build where clause for stats - FIXED: Same fix as getAllEquipment
+    const statsWhere = {
+      ...roleFilter,
+      // Only add "not null" check if roleFilter doesn't have a specific labId
+     ...(roleFilter?.labId ? {} : { labId: { not: null } }),
+      isActive: true,
+    };
+
     const [total, byStatus, byDepartment, criticalAlerts] = await Promise.all([
       // Total equipment count
       prisma.equipment.count({ 
-        where: { ...roleFilter, isActive: true } 
+        where: statsWhere
       }),
 
       // Count by status
       prisma.equipmentStatus.groupBy({
         by: ["status"],
         where: { 
-          equipment: { ...roleFilter, isActive: true } 
+          equipment: statsWhere
         },
         _count: true,
       }),
@@ -492,14 +509,14 @@ class EquipmentController {
       // Count by department
       prisma.equipment.groupBy({
         by: ["department"],
-        where: { ...roleFilter, isActive: true },
+        where: statsWhere,
         _count: true,
       }),
 
       // Critical unresolved alerts
       prisma.alert.count({
         where: {
-          equipment: { ...roleFilter, isActive: true },
+          equipment: statsWhere,
           isResolved: false,
           severity: { in: ["CRITICAL", "HIGH"] },
         },

@@ -68,13 +68,13 @@ export default function HelpSupportPage() {
       {/* Contact Section */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
         <h2 className="text-xl font-semibold mb-4">Contact Support</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
             <Mail className="w-5 h-5 text-blue-900 flex-shrink-0 mt-1" />
             <div>
               <h3 className="font-medium mb-1">Email</h3>
               <p className="text-sm text-gray-600">
-                support@iot-monitor.gov.in
+                saarthitactrion@gmail.com
               </p>
             </div>
           </div>
@@ -82,16 +82,16 @@ export default function HelpSupportPage() {
             <Phone className="w-5 h-5 text-blue-900 flex-shrink-0 mt-1" />
             <div>
               <h3 className="font-medium mb-1">Phone</h3>
-              <p className="text-sm text-gray-600">1800-XXX-XXXX</p>
+              <p className="text-sm text-gray-600">+91 7357756699</p>
             </div>
           </div>
-          <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
+          {/* <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
             <MessageCircle className="w-5 h-5 text-blue-900 flex-shrink-0 mt-1" />
             <div>
               <h3 className="font-medium mb-1">Live Chat</h3>
               <p className="text-sm text-gray-600">Available 9 AM - 6 PM</p>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
 

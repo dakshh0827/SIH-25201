@@ -2,6 +2,12 @@ import prisma from '../config/database.js';
 import logger from '../utils/logger.js';
 import { filterDataByRole } from '../middlewares/rbac.js';
 import { generatePDFReport } from '../jobs/reportGeneration.js';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const asyncHandler = (fn) => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next);
@@ -590,6 +596,77 @@ class ReportController {
     }
 
     res.json({ success: true, data: report });
+  });
+
+  // Add this method to the ReportController class (after getReportById)
+
+  // Download PDF report
+  downloadPDF = asyncHandler(async (req, res) => {
+    const { filename } = req.params;
+    
+    // Security: Validate filename to prevent directory traversal
+    if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      logger.warn(`Invalid filename attempt: ${filename} by ${req.user?.email}`);
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid filename' 
+      });
+    }
+
+    // Validate filename format (should be a PDF)
+    if (!filename.endsWith('.pdf')) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid file type. Only PDF files are allowed.' 
+      });
+    }
+
+    // Construct file path
+    const reportsDir = path.join(process.cwd(), 'reports');
+    const filePath = path.join(reportsDir, filename);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      logger.warn(`PDF not found: ${filename} requested by ${req.user?.email}`);
+      return res.status(404).json({ 
+        success: false, 
+        message: 'PDF file not found' 
+      });
+    }
+
+    try {
+      // Get file stats
+      const stat = fs.statSync(filePath);
+      
+      // Set headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Length', stat.size);
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Cache-Control', 'no-cache');
+      
+      // Stream the file
+      const fileStream = fs.createReadStream(filePath);
+      
+      fileStream.on('error', (error) => {
+        logger.error(`Error streaming PDF ${filename}: ${error.message}`);
+        if (!res.headersSent) {
+          res.status(500).json({ 
+            success: false, 
+            message: 'Error streaming PDF file' 
+          });
+        }
+      });
+      
+      fileStream.pipe(res);
+      
+      logger.info(`PDF downloaded: ${filename} by ${req.user.email}`);
+    } catch (error) {
+      logger.error(`Error downloading PDF ${filename}: ${error.message}`);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Error downloading PDF file' 
+      });
+    }
   });
 }
 

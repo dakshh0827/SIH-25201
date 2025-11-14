@@ -10,15 +10,13 @@ import {
 } from '../middlewares/validation.js';
 
 const router = express.Router();
+
+// Apply authentication to all routes
 router.use(authMiddleware);
 
-// Generate standard report (existing)
-router.post(
-  '/generate',
-  can.generateReports,
-  reportValidation,
-  reportController.generateReport
-);
+// ==========================================
+// SPECIFIC ROUTES FIRST (before dynamic :id)
+// ==========================================
 
 // Generate daily report
 router.post(
@@ -44,10 +42,37 @@ router.post(
   reportController.generateMonthlyReport
 );
 
-// Get all reports
-router.get('/', can.viewReports, reportController.getReports);
+// Generate standard report
+router.post(
+  '/generate',
+  can.generateReports,
+  reportValidation,
+  reportController.generateReport
+);
 
-// Get a single report
-router.get('/:id', can.viewReports, reportController.getReportById);
+// Download PDF report - MUST BE BEFORE /:id
+router.get(
+  '/download/:filename', 
+  can.viewReports, 
+  reportController.downloadPDF
+);
+
+// Get all reports
+router.get(
+  '/', 
+  can.viewReports, 
+  reportController.getReports
+);
+
+// ==========================================
+// DYNAMIC ROUTES LAST (catches everything else)
+// ==========================================
+
+// Get a single report by ID - MUST BE LAST
+router.get(
+  '/:id', 
+  can.viewReports, 
+  reportController.getReportById
+);
 
 export default router;

@@ -1,5 +1,5 @@
 // =====================================================
-// 26. src/pages/ReportGenerationPage.jsx
+// 26. src/pages/ReportGenerationPage.jsx - FIXED
 // =====================================================
 
 import { useState } from "react";
@@ -19,6 +19,7 @@ export default function ReportGenerationPage() {
     generateDailyReport,
     generateWeeklyReport,
     generateMonthlyReport,
+    downloadPDFByFilename,
     isLoading,
   } = useReportStore();
   const [reportType, setReportType] = useState("daily");
@@ -67,8 +68,9 @@ export default function ReportGenerationPage() {
       });
 
       // Download PDF if available
-      if (result.data.pdfUrl) {
-        window.open(result.data.pdfUrl, "_blank");
+      if (result.data.pdfUrl && formData.generatePDF) {
+        // Use the store's download method instead of window.open
+        await downloadPDFByFilename(result.data.pdfUrl);
       }
     } catch (error) {
       setMessage({
